@@ -91,7 +91,7 @@ endif
 "}
 "}
 
-" CUSTOMIZE EVERYTHING WITH VIMRC.BEFORE"{
+" VIMRC.PRIVATE && VIMRC.BEFORE"{
 " ======================================
 
 " Use before config if available"{
@@ -99,6 +99,13 @@ if filereadable(expand("$HOME/.vimrc.before"))
     source $HOME/.vimrc.before
 endif
 "}
+
+" Use private config if available"{
+if filereadable(expand("$HOME/.vimrc.private"))
+    source $HOME/.vimrc.private
+endif
+"}
+
 "}
 
 " BUILTIN OPTIONS"{
@@ -243,6 +250,10 @@ set smarttab
 let mapleader=","
 let g:mapleader=","
 
+" Map <F11> to / (search) and Ctrl-<F11> to ? (backwards search)
+map <F11> /
+map <C-F11> ?
+
 " Paste toggles
 set pastetoggle=<F12>
 au InsertLeave * set nopaste
@@ -274,10 +285,25 @@ nnoremap <leader>q :qa!<cr>
 inoremap jj <ESC>
 inoremap kk <ESC>
 inoremap jk <ESC>
+inoremap kj <ESC>
 
-" Wrapped lines goes down/up to next row, rather than next line in file
+" Unmap arrow keys
+noremap <Up> <c-W>k
+noremap <Down> <c-W>j
+noremap <Left> :bprev <CR>
+noremap <Right> :bnext<CR>
+
+" Home row jump to start and end of line
+noremap H ^
+noremap L $
+
+" Treat long lines as break lines (useful when moving around in them)
 nnoremap <silent> k :<C-U>execute 'normal!' (v:count>1 ? "m'".v:count.'k' : 'gk')<Enter>
 nnoremap <silent> j :<C-U>execute 'normal!' (v:count>1 ? "m'".v:count.'j' : 'gj')<Enter>
+
+" Yank to Clipboard 
+nnoremap <C-y> "+y
+vnoremap <C-y> "+y
 
 " Switch different kind line number
 nnoremap <leader>, :call NumberToggle()<cr>
@@ -292,20 +318,34 @@ nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
 vnoremap <Space> zf
 
 " Window navigation
-map <C-J> <C-W>j<C-W>_
-map <C-k> <C-W>k<C-W>_
-map <C-h> <C-W>h<C-W>_
-map <C-l> <C-W>l<C-W>_
+map <C-j> <C-W>j
+map <C-k> <C-W>k
+map <C-h> <C-W>h
+map <C-l> <C-W>l
 
+"map <C-J> <C-W>j<C-W>_
+"map <C-k> <C-W>k<C-W>_
+"map <C-h> <C-W>h<C-W>_
+"map <C-l> <C-W>l<C-W>_
 
-" AUTOCOMMANDS
+" Adjust viewports to the same size
+map <Leader>= <C-w>=
+"}
+
+" AUTOCOMMANDS"{
 " ============
+
+" Vimrc"{
+" -----
 
 augroup VIMRC
     au!
     autocmd BufWritePost  ~/.vimrc source ~/.vimrc
 augroup END
+"}
 
+" Text"{
+" ----
 
 augroup TEXT
     au!
@@ -320,6 +360,10 @@ augroup TEXT
     " Correct filetype detection for *.md files.
     au BufRead,BufNewFile *.md set filetype=markdown
 augroup END
+"}
+
+" Programming"{
+" -----------
 
 augroup PROGRAMMING
     au BufRead,BufNewFile *.html set shiftwidth=2
@@ -327,6 +371,10 @@ augroup PROGRAMMING
     au BufRead,BufNewFile *.html set tabstop=2
     au FileType c,cpp,java,go,php,javascript,python,twig,xml,yml,perl autocmd BufWritePre <buffer> if !exists('g:billinux_keep_trailing_whitespace') | call StripTrailingWhitespace() | endif
 augroup END
+"}
+
+" Number"{
+" ------
 
 augroup NUMBER
     au!
@@ -335,6 +383,10 @@ augroup NUMBER
     autocmd InsertLeave * :set relativenumber
     autocmd CursorMoved * :set relativenumber
 augroup END
+"}
+
+" Autoview"{
+" --------
 
 augroup AUTOVIEW
     au!
@@ -342,82 +394,6 @@ augroup AUTOVIEW
     autocmd BufWritePost,WinLeave,BufWinLeave * if MakeViewCheck() | mkview | endif
     autocmd BufWinEnter * if MakeViewCheck() | silent! loadview | endif
 augroup END
-
-
-
-"}
-
-" FUNCTIONS"{
-" =========
-
-function! NeatFoldText()"{
-  let line = ' ' . substitute(getline(v:foldstart), '^\s*"\?\s*\|\s*"\?\s*' . '\d*\s*', '', 'g') . ' '
-  let lines_count = v:foldend - v:foldstart + 1
-  let lines_count_text = '| ' . printf("%10s", lines_count . ' lines') . ' |'
-  let foldchar = matchstr(&fillchars, 'fold:\zs.')
-  let foldtextstart = strpart('+' . repeat(foldchar, v:foldlevel*2) . line, 0, (winwidth(0)*2)/3)
-  let foldtextend = lines_count_text . repeat(foldchar, 8)
-  let foldtextlength = strlen(substitute(foldtextstart . foldtextend, '.', 'x', 'g')) + &foldcolumn
-  return foldtextstart . repeat(foldchar, winwidth(0)-foldtextlength) . foldtextend
-endfunction
-"set foldtext=NeatFoldText()
-"}
-
-function! LoadSession()"{
-    " Load last vim session
-    if argc() == 0
-        execute 'source $VIMHOME/session.vim'
-    endif
-endfunction
-"}
-
-function! SaveSession()"{
-    " Save current vim session.
-    execute 'mksession! $VIMHOME/session.vim'
-endfunction
-"}
-
-function! NumberToggle()"{
-    if(&relativenumber == 1)
-        set norelativenumber
-        set number
-    else
-        set number
-        set relativenumber
-endif
-endfunc
-"}
-
-function! StripTrailingWhitespace()"{
-    " Preparation: save last search, and cursor position.
-    let _s=@/
-    let l = line(".")
-    let c = col(".")
-    " do the business:
-    %s/\s\+$//e
-    " clean up: restore previous search history, and cursor position
-    let @/=_s
-    call cursor(l, c)
-endfunction
-"}
-
-function! MakeViewCheck()"{
-    if has('quickfix') && &buftype =~ 'nofile' | return 0 | endif
-    if expand('%') =~ '\[.*\]' | return 0 | endif
-    if empty(glob(expand('%:p'))) | return 0 | endif
-    if &modifiable == 0 | return 0 | endif
-    if len($TEMP) && expand('%:p:h') == $TEMP | return 0 | endif
-    if len($TMP) && expand('%:p:h') == $TMP | return 0 | endif
-
-    let file_name = expand('%:p')
-    for ifiles in g:skipview_files
-        if file_name =~ ifiles
-            return 0
-        endif
-    endfor
-
-    return 1
-endfunction
 "}
 "}
 
@@ -676,6 +652,7 @@ if !exists("g:override_billinux_bundles")
     if count(g:billinux_bundle_groups, 'colors')
         Bundle 'altercation/vim-colors-solarized'
         Bundle 'tomasr/molokai'
+        Bundle 'reedes/vim-thematic'
 
         if !exists('g:billinux_no_extra_bundles')
             Bundle 'flazz/vim-colorschemes'
@@ -880,19 +857,6 @@ endif
 "                   run : urxvt -fn 'xft:DejaVu Sans Mono for Powerline-11'
 "                   for testing
 
-if has('unix') || has('win32unix')
-    "set guifont=DejaVu\ Sans\ Mono\ for\ Powerline:h11
-    set guifont=Powerline\ Consolas\ 11
-elseif has('macunix')
-    set guifont=Powerline\ Consolas\ 11
-    "set guifont=Menlo\ Regular\ for\ Powerline:h15
-    "set guifont=Droid\ Sans\ Mono\ for \Powerline:h14
-    "set guifont=Meslo\ LG\ for\ Powerline:h11
-elseif has('win16') || has('win32') || has('win64')
-    set guifont=Powerline_Consolas:h11:cANSI
-endif
-
-
 if isdirectory(expand($VIMBUNDLE . "/vim-airline"))
     let g:airline#extensions#tabline#enabled = 1
     "let g:airline_theme             = 'powerlineish'
@@ -955,9 +919,8 @@ if isdirectory(expand($VIMBUNDLE . "/tagbar"))
 endif
 "}
 
-" Sessionman
+" Sessionman"{
 " ----------
-
 
 set sessionoptions=blank,buffers,curdir,folds,tabpages,winsize
 
@@ -966,7 +929,17 @@ if isdirectory(expand($VIMBUNDLE . "/sessionman.vim"))
     nmap <leader>ss :SessionSave<CR>
     nmap <leader>sc :SessionClose<CR>
 endif
+"}
 
+" Indent-guides"{
+" -------------
+
+if isdirectory(expand($VIMBUNDLE . "/vim-indent-guides"))
+    let g:indent_guides_start_level = 2
+    let g:indent_guides_guide_size = 1
+    let g:indent_guides_enable_on_vim_startup = 1
+endif
+"}
 
 "}
 
@@ -988,6 +961,37 @@ if has('unix')
     let g:clang_complete_copen=1
     let g:clang_periodic_quickfix=0
     autocmd Filetype c,cpp,cxx,h,hxx autocmd BufWritePre <buffer> :call g:ClangUpdateQuickFix()
+endif
+"}
+
+" Omnicomplete"{
+" ------------
+
+" To disable omni complete, add the following to your .vimrc.before.local file:
+"   let g:billinux_no_omni_complete = 1
+if !exists('g:billinux_no_omni_complete')
+    if has("autocmd") && exists("+omnifunc")
+        autocmd Filetype *
+            \if &omnifunc == "" |
+            \setlocal omnifunc=syntaxcomplete#Complete |
+            \endif
+    endif
+
+    hi Pmenu  guifg=#000000 guibg=#F8F8F8 ctermfg=black ctermbg=Lightgray
+    hi PmenuSbar  guifg=#8A95A7 guibg=#F8F8F8 gui=NONE ctermfg=darkcyan ctermbg=lightgray cterm=NONE
+    hi PmenuThumb  guifg=#F8F8F8 guibg=#8A95A7 gui=NONE ctermfg=lightgray ctermbg=darkcyan cterm=NONE
+
+    " Some convenient mappings
+    inoremap <expr> <Esc>      pumvisible() ? "\<C-e>" : "\<Esc>"
+    inoremap <expr> <CR>       pumvisible() ? "\<C-y>" : "\<CR>"
+    inoremap <expr> <Down>     pumvisible() ? "\<C-n>" : "\<Down>"
+    inoremap <expr> <Up>       pumvisible() ? "\<C-p>" : "\<Up>"
+    inoremap <expr> <C-d>      pumvisible() ? "\<PageDown>\<C-p>\<C-n>" : "\<C-d>"
+    inoremap <expr> <C-u>      pumvisible() ? "\<PageUp>\<C-p>\<C-n>" : "\<C-u>"
+
+    " Automatically open and close the popup menu / preview window
+    au CursorMovedI,InsertLeave * if pumvisible() == 0|silent! pclose|endif
+    set completeopt=menu,preview,longest
 endif
 "}
 
@@ -1421,6 +1425,13 @@ endif
 " Javascript"{
 " =-=-=-=-=-
 
+" JSON"{
+" -----
+
+nmap <leader>jt <Esc>:%!python -m json.tool<CR><Esc>:set filetype=json<CR>
+let g:vim_json_syntax_conceal = 0
+"}
+
 
 "}
 
@@ -1438,6 +1449,9 @@ endif
 " ------------
 
 if isdirectory(expand($VIMBUNDLE . "/HTML-AutoCloseTag"))
+    " Make it so AutoCloseTag works for xml and xhtml files as well
+    au FileType xhtml,xml ru ftplugin/html/autoclosetag.vim
+    nmap <Leader>ac <Plug>ToggleAutoCloseMappings
 endif
 "}
 
@@ -1472,44 +1486,69 @@ endif
 " Colors"{
 " =-=-=-
 
+" Thematic"{
+" --------
 
-" REQUIRED for CSApprox
-if $TERM =~ '^xterm*'
-    set t_Co=256
-elseif $TERM =~ '^rxvt*'
-    set t_Co=256
-elseif $COLORTERM == 'gnome-terminal'
-    set t_Co=256
-elseif $TERM =~ '^linux'
-    set t_Co=8
+if isdirectory(expand($VIMBUNDLE . "/vim-thematic"))
+    " All themes are defines here
+    let g:thematic#themes = {
+    \ 'molokai' :   {'colorscheme': 'molokai',
+    \                'airline-theme': 'molokai'
+    \               },
+    \
+    \ 'solarized' : {'colorscheme': 'solarized',
+    \                'airline-theme': 'solarized'
+    \               },
+    \ }
+
+    " Default values to be shared by all defined themes
+    let g:thematic#defaults = {
+    \ 'background': 'dark',
+    \ 'laststatus': 2,
+    \ }
+
+    " Additional options for GUI
+    let g:thematic#themes ={
+    \ 'molokai' :   {'typeface': 'Source Code Pro Light',
+    \                'font-size': 12
+    \               }
+    \ }
+
+    " Setting an initial theme
+    let g:thematic#theme_name = 'molokai'
+
+    " Themes keymap
+    nnoremap <leader>S :Thematic solarized<CR>
+    nnoremap <leader>M :Thematic molokai<CR>
+
 else
-    set t_Co=16
-endif
 
-" In your .vimrc.before.local file
-" list only the color groups you will use
-if !exists('g:billinux_color_groups')
-    let g:billinux_color_groups=['molokai', 'solarized',]
-endif
-
-
-if count(g:billinux_color_groups, 'molokai')
-    if isdirectory(expand($VIMBUNDLE . "/molokai"))
-        let g:molokai_original = 1
-        colorscheme molokai
+    " In your .vimrc.before.local file
+    " list only the color groups you will use
+    if !exists('g:billinux_color_groups')
+        let g:billinux_color_groups=['molokai', 'solarized',]
     endif
-endif
 
-if count(g:billinux_color_groups, 'solarized')
-    if isdirectory(expand($VIMBUNDLE . "/vim-colors-solarized"))
-        let g:solarized_termcolors=256
-        let g:solarized_termtrans=1
-        let g:solarized_contrast="normal"
-        let g:solarized_visibility="normal"
-        colorscheme solarized
+
+    if count(g:billinux_color_groups, 'molokai')
+        if isdirectory(expand($VIMBUNDLE . "/molokai"))
+            let g:molokai_original = 1
+            colorscheme molokai
+        endif
     endif
-endif
 
+    if count(g:billinux_color_groups, 'solarized')
+        if isdirectory(expand($VIMBUNDLE . "/vim-colors-solarized"))
+            let g:solarized_termcolors=256
+            let g:solarized_termtrans=1
+            let g:solarized_contrast="normal"
+            let g:solarized_visibility="normal"
+            colorscheme solarized
+        endif
+    endif
+
+endif
+"}
 
 "}
 
@@ -1536,6 +1575,121 @@ endif
 
 "}
 
+"}
+
+" GUI SETTING"{
+" ===========
+
+if has('gui_running')
+    set antialias
+    set lines=40
+
+    " GVim options to make it like Vim
+    set guioptions+=c
+    set guioptions+=R
+    set guioptions-=m
+    set guioptions-=r           " Kill right scrollbar
+    set guioptions-=b           " Kill right scrollbar
+    set guioptions-=T           " Kill toolbar
+    set guioptions-=R
+    set guioptions-=L           " Kill left scrollbar multiple buffers
+    set guioptions-=e           " Kill left scrollbar multiple buffers
+
+    " Font to run vim-airline (cf.: vim-airline config.
+    if has('unix') || has('win32unix')
+        "set guifont=DejaVu\ Sans\ Mono\ for\ Powerline:h11
+        set guifont=Powerline\ Consolas\ 11
+    elseif has('macunix')
+        set guifont=Powerline\ Consolas\ 11
+        "set guifont=Menlo\ Regular\ for\ Powerline:h15
+        "set guifont=Droid\ Sans\ Mono\ for \Powerline:h14
+        "set guifont=Meslo\ LG\ for\ Powerline:h11
+    elseif has('win16') || has('win32') || has('win64')
+        set guifont=Powerline_Consolas:h11:cANSI
+    endif
+
+elseif $TERM =~ '^xterm*' || $TERM =~ '^rxvt*' || $TERM =~ '^screen' ||  $COLORTERM == 'gnome-terminal'
+    set t_Co=256
+elseif isdirectory(expand($VIMBUNDLE . "/csapprox"))
+    " To avoid CSApprox workarounds in console
+    " disable CSApprox
+    let g:CSApprox_loaded=1
+endif
+
+"}
+
+" FUNCTIONS"{
+" =========
+
+function! NeatFoldText()"{
+  let line = ' ' . substitute(getline(v:foldstart), '^\s*"\?\s*\|\s*"\?\s*' . '\d*\s*', '', 'g') . ' '
+  let lines_count = v:foldend - v:foldstart + 1
+  let lines_count_text = '| ' . printf("%10s", lines_count . ' lines') . ' |'
+  let foldchar = matchstr(&fillchars, 'fold:\zs.')
+  let foldtextstart = strpart('+' . repeat(foldchar, v:foldlevel*2) . line, 0, (winwidth(0)*2)/3)
+  let foldtextend = lines_count_text . repeat(foldchar, 8)
+  let foldtextlength = strlen(substitute(foldtextstart . foldtextend, '.', 'x', 'g')) + &foldcolumn
+  return foldtextstart . repeat(foldchar, winwidth(0)-foldtextlength) . foldtextend
+endfunction
+"set foldtext=NeatFoldText()
+"}
+
+function! LoadSession()"{
+    " Load last vim session
+    if argc() == 0
+        execute 'source $VIMHOME/session.vim'
+    endif
+endfunction
+"}
+
+function! SaveSession()"{
+    " Save current vim session.
+    execute 'mksession! $VIMHOME/session.vim'
+endfunction
+"}
+
+function! NumberToggle()"{
+    if(&relativenumber == 1)
+        set norelativenumber
+        set number
+    else
+        set number
+        set relativenumber
+endif
+endfunc
+"}
+
+function! StripTrailingWhitespace()"{
+    " Preparation: save last search, and cursor position.
+    let _s=@/
+    let l = line(".")
+    let c = col(".")
+    " do the business:
+    %s/\s\+$//e
+    " clean up: restore previous search history, and cursor position
+    let @/=_s
+    call cursor(l, c)
+endfunction
+"}
+
+function! MakeViewCheck()"{
+    if has('quickfix') && &buftype =~ 'nofile' | return 0 | endif
+    if expand('%') =~ '\[.*\]' | return 0 | endif
+    if empty(glob(expand('%:p'))) | return 0 | endif
+    if &modifiable == 0 | return 0 | endif
+    if len($TEMP) && expand('%:p:h') == $TEMP | return 0 | endif
+    if len($TMP) && expand('%:p:h') == $TMP | return 0 | endif
+
+    let file_name = expand('%:p')
+    for ifiles in g:skipview_files
+        if file_name =~ ifiles
+            return 0
+        endif
+    endfor
+
+    return 1
+endfunction
+"}
 "}
 
 " CUSTOM VIMRC & GVIMRC"{
