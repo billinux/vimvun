@@ -739,8 +739,7 @@ endif
 " --------
 
 if isdirectory(expand($VIMBUNDLE . "/csapprox"))
-    " REQUIRED for CSApprox
-    set t_Co=256
+
 endif
 "}
 
@@ -962,6 +961,19 @@ endif
 " Colors"{
 " =-=-=-
 
+
+" REQUIRED for CSApprox
+if $TERM =~ '^xterm*'
+    set t_Co=256
+elseif $TERM =~ '^rxvt*'
+    set t_Co=256
+elseif $COLORTERM == 'gnome-terminal'
+    set t_Co=256
+elseif $TERM =~ '^linux'
+    set t_Co=8
+else
+    set t_Co=16
+endif
 
 " In your .vimrc.before.local file
 " list only the color groups you will use
