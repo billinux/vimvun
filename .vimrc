@@ -256,7 +256,7 @@ map <C-F11> ?
 
 " Paste toggles
 set pastetoggle=<F12>
-au InsertLeave * set nopaste
+"au InsertLeave * set nopaste
 
 " Indent multiple lines with TAB
 vmap <Tab> >
@@ -310,9 +310,6 @@ nnoremap <leader>, :call NumberToggle()<cr>
 
 " Remove the Windows ^M - when the encodings gets messed up
 noremap <Leader>mm mmHmt:%s/<C-V><cr>//ge<cr>'tzt'm
-
-"nnoremap <space> za
-"vnoremap <space> zf
 
 nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
 vnoremap <Space> zf
@@ -426,6 +423,8 @@ Bundle 'gmarik/vundle'
 " --------------------
 Bundle 'MarcWeber/vim-addon-mw-utils'
 Bundle 'tomtom/tlib_vim'
+" ag better than ack
+" apt-get install silversearcher-ag
 if executable('ag')
     Bundle 'mileszs/ack.vim'
     let g:ackprg = 'ag --nogroup --nocolor --column --smart-case'
@@ -470,10 +469,11 @@ if !exists("g:override_billinux_bundles")
         Bundle 'scrooloose/nerdtree'
         Bundle 'kien/ctrlp.vim'
         Bundle 'tacahiroy/ctrlp-funky'
-        Bundle 'shougo/unite.vim'
+        "Bundle 'shougo/unite.vim'
         Bundle 'tpope/vim-surround'
         Bundle 'godlygeek/csapprox'
         Bundle 'shougo/vimshell.vim'
+        "Bundle 'shougo/vimproc.vim'
         Bundle 'bling/vim-airline'
         " You have to install pre-patched powerline fonts on your system
         " before installing vim-airline
@@ -836,6 +836,19 @@ if isdirectory(expand($VIMBUNDLE . "/vimshell.vim"))
 endif
 "}
 
+" Vimproc"{
+" ------------
+" 
+" YOU MUST REMEMBER TO COMPILE AFTER CLONING !!!
+" Linux(make), OSX(make or make ARCHS='i386 x86_64')
+" Cygwin(make -f make_cygwin.mak)
+" Windows using MinGW(64bit Vim) (mingw32-make -f make_mingw64.mak)
+" Precomiled version for Vimproc in Windows :
+" http://www.kaoriya.net/software/vim/
+if isdirectory(expand($VIMBUNDLE . "/vimproc.vim"))
+endif
+"}
+
 " Airline"{
 " -------
 
@@ -940,7 +953,6 @@ if isdirectory(expand($VIMBUNDLE . "/vim-indent-guides"))
     let g:indent_guides_enable_on_vim_startup = 1
 endif
 "}
-
 "}
 
 " Writing"{
@@ -1574,7 +1586,6 @@ endif
 "}
 
 "}
-
 "}
 
 " GUI SETTING"{
@@ -1582,30 +1593,31 @@ endif
 
 if has('gui_running')
     set antialias
-    set lines=40
+    set lines=60
+    set columns=120
 
     " GVim options to make it like Vim
     set guioptions+=c
     set guioptions+=R
     set guioptions-=m
-    set guioptions-=r           " Kill right scrollbar
-    set guioptions-=b           " Kill right scrollbar
-    set guioptions-=T           " Kill toolbar
+    set guioptions-=r
+    set guioptions-=
+    set guioptions-=T
     set guioptions-=R
-    set guioptions-=L           " Kill left scrollbar multiple buffers
-    set guioptions-=e           " Kill left scrollbar multiple buffers
+    set guioptions-=L
+    set guioptions-=e
 
     " Font to run vim-airline (cf.: vim-airline config.
     if has('unix') || has('win32unix')
-        "set guifont=DejaVu\ Sans\ Mono\ for\ Powerline:h11
-        set guifont=Powerline\ Consolas\ 11
+        set guifont=DejaVu\ Sans\ Mono\ for\ Powerline:h11
+        "set guifont=Powerline\ Consolas\ 10
     elseif has('macunix')
-        set guifont=Powerline\ Consolas\ 11
+        set guifont=Powerline\ Consolas\ 10
         "set guifont=Menlo\ Regular\ for\ Powerline:h15
         "set guifont=Droid\ Sans\ Mono\ for \Powerline:h14
         "set guifont=Meslo\ LG\ for\ Powerline:h11
     elseif has('win16') || has('win32') || has('win64')
-        set guifont=Powerline_Consolas:h11:cANSI
+        set guifont=Powerline_Consolas:h10:cANSI
     endif
 
 elseif $TERM =~ '^xterm*' || $TERM =~ '^rxvt*' || $TERM =~ '^screen' ||  $COLORTERM == 'gnome-terminal'
@@ -1620,6 +1632,7 @@ endif
 
 " FUNCTIONS"{
 " =========
+
 
 function! NeatFoldText()"{
   let line = ' ' . substitute(getline(v:foldstart), '^\s*"\?\s*\|\s*"\?\s*' . '\d*\s*', '', 'g') . ' '
@@ -1690,10 +1703,11 @@ function! MakeViewCheck()"{
     return 1
 endfunction
 "}
+
 "}
 
-" CUSTOM VIMRC & GVIMRC"{
-" =====================
+" VIMRC.LOCAL & GVIMRC"{
+" ====================
 
 " Use local vimrc if available
 if filereadable(expand("~/.vimrc.local"))
